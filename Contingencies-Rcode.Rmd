@@ -1,0 +1,1148 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+### Setup
+```{r}
+#install StMoMo package
+install.packages("forecast")
+install.packages("curl")
+install.packages("StMoMo")
+# install.packages("devtools")
+library(devtools)
+
+install_github("robjhyndman/demography")
+
+```
+
+
+```{r}
+#construct the data for male,female and total
+# install.packages("demography")
+
+
+library(demography)
+AUdata=hmd.mx(country="AUS",username="jamesjustin134@gmail.com",password="At7snh3wr2=x4qCq$)b(",label="Australia")
+Maledata=StMoMoData(AUdata,series="male")
+Femaledata=StMoMoData(AUdata,series="female")
+Totaldata=StMoMoData(AUdata,series="total")
+```
+
+
+```{r}
+#plot with peiord, age and cohort effect
+femexp=matrix(Femaledata$Ext, nrow = 111)
+maleexp=matrix(Maledata$Ext, nrow = 111)
+Totexp=matrix(Totaldata$Ext, nrow = 111)
+
+
+femdeath = matrix(Femaledata$Dxt, nrow = 111)
+maledeath=matrix(Maledata$Dxt, nrow = 111)
+totdeath=matrix(Totaldata$Dxt, nrow = 111)
+
+Crude_d_r_f=femdeath/femexp
+Crude_d_r_m=maledeath/maleexp
+Crude_d_r= totdeath/Totexp
+Crude_d_r_ft=Crude_d_r_f[21:90,-1:-39]
+Crude_d_r_mt=Crude_d_r_m[21:90,-1:-39]
+Crude_d_r_tott=Crude_d_r_tot[21:90,-1:-39]
+femdeatht=femdeath[21:90,-1,-39]
+femdeatht=femdeath[21:90,-1:-39]
+femexpt=femexp[21:90,-1:-39]
+maledeatht=maledeath[21:90,-1:-39]
+maleexpt=maleexp[21:90,-1:-39]
+
+
+Maledemogdata=demogdata(Crude_d_r_mt,maleexpt, ages = ages.fit, years = years.fit, type = "mortality", label = "AUS", name = "male")
+Totdemogdata=demogdata(Crude_d_r_tott,Totexpt, ages = ages.fit, years = years.fit, type = "mortality", label = "AUS", name = "Total")
+FeMaledemogdata=demogdata(Crude_d_r_ft,femexpt, ages = ages.fit, years = years.fit, type = "mortality", label = "AUS", name = "female")
+plot(FeMaledemogdata)
+plot(Maledemogdata)
+plot(Totdemogdata)
+```
+
+
+```{r}
+#M1
+#Male
+M1LCfit_Male=fit(lc(link="log",const="sum"),data=Maledata,ages.fit=20:89,years.fit = 1960:2016)
+plot(M1LCfit_Male)
+BIC(M1LCfit_Male)
+resM1_M=residuals(M1LCfit_Male)
+
+#if we try logit link and convert it to q 
+#change centrail data to initial central data
+initialMaledata=central2initial(Maledata)
+M1LCfit_Malelogit=fit(lc(link="logit",const="sum"),data=initialMaledata,ages.fit=20:89,years.fit = 1960:2016)
+forecast_Malelogit=forecast(M1LCfit_Malelogit,h=20)
+mxtforecastlogit=-log(1-forecast_Malelogit$rates,exp(1))
+
+forecast_Malelog=forecast(M1LCfit_Male,h=20)
+mxtforecastlog=forecast_Malelog$rates
+#robustness
+M1LCfit_Male.2=fit(lc(link="log",const="sum"),data=Maledata,ages.fit=20:89,years.fit = 1980:2016)
+
+plot(20:89,M1LCfit_Male$ax,type="l",lwd=3,col="dark blue",xlab = "x",ylab="ax")
+lines(20:89,M1LCfit_Male.2$ax,type="l",col="blue")
+
+plot(20:89,M1LCfit_Male$bx,type="l",lwd=3,col="dark blue",xlab="x",ylab="bx")
+lines(20:89,M1LCfit_Male.2$bx,type="l",col="blue")
+plot(1960:2016,M1LCfit_Male$kt,type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M1LCfit_Male.2$kt,type="l",col="blue")
+
+#Female
+M1LCfit_Female=fit(lc(link="log",const="sum"),data=Femaledata,ages.fit=20:89,years.fit = 1960:2016)
+plot(M1LCfit_Female)
+BIC(M1LCfit_Female)
+resM1_F=residuals(M1LCfit_Female)
+
+#robustness testing
+M1LCfit_Female.2=fit(lc(link="log",const="sum"),data=Femaledata,ages.fit=20:89,years.fit = 1980:2016)
+
+plot(20:89,M1LCfit_Female$ax,type="l",lwd=3,col="dark blue",xlab = "x",ylab="ax")
+lines(20:89,M1LCfit_Female.2$ax,type="l",col="blue")
+
+plot(20:89,M1LCfit_Female$bx,type="l",lwd=3,col="dark blue",xlab="x",ylab="bx")
+lines(20:89,M1LCfit_Female.2$bx,type="l",col="blue")
+plot(1960:2016,M1LCfit_Female$kt,type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M1LCfit_Female.2$kt,type="l",col="blue")
+
+#Total
+M1LCfit_Total=fit(lc(link="log",const="sum"),data=Totaldata,ages.fit=20:89,years.fit = 1960:2016)
+plot(M1LCfit_Total)
+BIC(M1LCfit_Total)
+resM1_T=residuals(M1LCfit_Total)
+
+
+M1LCfit_Total.2=fit(lc(link="log",const="sum"),data=Totaldata,ages.fit=20:89,years.fit = 1980:2016)
+
+plot(20:89,M1LCfit_Total$ax,type="l",lwd=3,col="dark blue",xlab = "x",ylab="ax")
+lines(20:89,M1LCfit_Total.2$ax,type="l",col="blue")
+
+plot(20:89,M1LCfit_Total$bx,type="l",lwd=3,col="dark blue",xlab="x",ylab="bx")
+lines(20:89,M1LCfit_Total.2$bx,type="l",col="blue")
+plot(1960:2016,M1LCfit_Total$kt,type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M1LCfit_Total.2$kt,type="l",col="blue")
+
+
+```
+
+
+```{r}
+#M2
+#Male
+M2RHfit_Male=fit(rh(link="log",cohortAgeFun = "NP",approxConst = TRUE),data=Maledata,ages.fit=20:89,years.fit = 1960:2016,start.ax =M1LCfit_Male$ax,
+                 start.bx = M1LCfit_Male$bx,start.kt=M1LCfit_Male$kt)
+plot(M2RHfit_Male)
+BIC(M2RHfit_Male)
+resM2_M=residuals(M2RHfit_Male)
+
+#robustness testing 
+M2RHfit_Male.2=fit(rh(link="log",cohortAgeFun = "NP",approxConst=TRUE),data=Maledata,ages.fit=20:89,years.fit = 1980:2016,start.ax =M1LCfit_Male.2$ax,
+                 start.bx = M1LCfit_Male.2$bx,start.kt=M1LCfit_Male.2$kt)
+plot(20:89,M2RHfit_Male$ax,type="l",lwd=3,col="dark blue",xlab = "x",ylab="ax")
+lines(20:89,M2RHfit_Male.2$ax,type="l",col="blue")
+plot(20:89,M2RHfit_Male$bx,type="l",lwd=3,col="dark blue",xlab="x",ylab="bx")
+lines(20:89,M2RHfit_Male.2$bx,type="l",col="blue")
+plot(20:89,M2RHfit_Male$b0x,type="l",lwd=3,col="dark blue",xlab="x",ylab="b0x")
+lines(20:89,M2RHfit_Male.2$b0x,type="l",col="blue")
+plot(1960:2016,M2RHfit_Male$kt,type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M2RHfit_Male.2$kt,type="l",col="blue")
+plot(1871:1996,M2RHfit_Male$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M2RHfit_Male.2$gc,type="l",col="blue")
+
+#Female
+M2RHfit_Female=fit(rh(link="log",cohortAgeFun = "NP"),data=Femaledata,ages.fit=20:89,years.fit = 1960:2016,start.ax =M1LCfit_Female$ax,
+                 start.bx = M1LCfit_Female$bx,start.kt=M1LCfit_Female$kt)
+plot(M2RHfit_Female)
+BIC(M2RHfit_Female)
+resM2_F=residuals(M2RHfit_Female)
+
+#robustness testing
+M2RHfit_Female.2=fit(rh(link="log",cohortAgeFun = "NP"),data=Femaledata,ages.fit=20:89,years.fit = 1980:2016,start.ax =M1LCfit_Female.2$ax,
+                   start.bx = M1LCfit_Female.2$bx,start.kt=M1LCfit_Female.2$kt)
+plot(20:89,M2RHfit_Female$ax,type="l",lwd=3,col="dark blue",xlab = "x",ylab="ax")
+lines(20:89,M2RHfit_Female.2$ax,type="l",col="blue")
+plot(20:89,M2RHfit_Female$bx,type="l",lwd=3,col="dark blue",xlab="x",ylab="bx")
+lines(20:89,M2RHfit_Female.2$bx,type="l",col="blue")
+plot(20:89,M2RHfit_Female$b0x,type="l",lwd=3,col="dark blue",xlab="x",ylab="b0x")
+lines(20:89,M2RHfit_Female.2$b0x,type="l",col="blue")
+plot(1960:2016,M2RHfit_Female$kt,type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M2RHfit_Female.2$kt,type="l",col="blue")
+plot(1871:1996,M2RHfit_Female$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M2RHfit_Female.2$gc,type="l",col="blue")
+
+#Total
+M2RHfit_Total=fit(rh(link="log",cohortAgeFun = "NP",approxConst = TRUE),data=Totaldata,ages.fit=20:89,years.fit = 1960:2016,start.ax =M1LCfit_Total$ax,
+                 start.bx = M1LCfit_Total$bx,start.kt=M1LCfit_Total$kt)
+plot(M2RHfit_Total)
+BIC(M2RHfit_Total)
+resM2_T=residuals(M2RHfit_Total)
+
+#Robustness Testing
+M2RHfit_Total.2=fit(rh(link="log",cohortAgeFun = "NP"),data=Totaldata,ages.fit=20:89,years.fit = 1980:2016,start.ax =M1LCfit_Total.2$ax,
+                   start.bx = M1LCfit_Total.2$bx,start.kt=M1LCfit_Total.2$kt)
+plot(20:89,M2RHfit_Total$ax,type="l",lwd=3,col="dark blue",xlab = "x",ylab="ax")
+lines(20:89,M2RHfit_Total.2$ax,type="l",col="blue")
+plot(20:89,M2RHfit_Total$bx,type="l",lwd=3,col="dark blue",xlab="x",ylab="bx")
+lines(20:89,M2RHfit_Total.2$bx,type="l",col="blue")
+plot(20:89,M2RHfit_Total$b0x,type="l",lwd=3,col="dark blue",xlab="x",ylab="b0x")
+lines(20:89,M2RHfit_Total.2$b0x,type="l",col="blue")
+plot(1960:2016,M2RHfit_Total$kt,type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M2RHfit_Total.2$kt,type="l",col="blue")
+plot(1871:1996,M2RHfit_Total$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M2RHfit_Total.2$gc,type="l",col="blue")
+
+```
+
+
+```{r}
+#M3
+#Male
+M3APCfit_Male=fit(apc(link="log"),data=Maledata,ages.fit=20:89,years.fit=1960:2016)
+plot(M3APCfit_Male)
+resM3_M=residuals(M3APCfit_Male)
+
+
+#ROBUSTNESS TESTING
+M3APCfit_Male.2=fit(apc(link="log"),data=Maledata,ages.fit=20:89,years.fit=1980:2016)
+plot(20:89,M3APCfit_Male$ax,type="l",lwd=3,col="dark blue",xlab = "x",ylab="ax")
+lines(20:89,M3APCfit_Male.2$ax,type="l",col="blue")
+plot(1960:2016,M3APCfit_Male$kt,type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M3APCfit_Male.2$kt,type="l",col="blue")
+plot(1871:1996,M3APCfit_Male$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M3APCfit_Male.2$gc,type="l",col="blue")
+
+resMaleM3=residuals(MaleM3)
+plot(resMaleM3,type="colourmap",main="Male M3")
+plot(resMaleM3,type="scatter",main="Male M3",col="dark blue")
+#Female
+M3APCfit_Female=fit(apc(link="log"),data=Femaledata,ages.fit=20:89,years.fit=1960:2016)
+plot(M3APCfit_Female)
+resM3_F=residuals(M3APCfit_Female)
+
+
+#robustness testing
+M3APCfit_Female.2=fit(apc(link="log"),data=Femaledata,ages.fit=20:89,years.fit=1980:2016)
+plot(20:89,M3APCfit_Female$ax,type="l",lwd=3,col="dark blue",xlab = "x",ylab="ax")
+lines(20:89,M3APCfit_Female.2$ax,type="l",col="blue")
+plot(1960:2016,M3APCfit_Female$kt,type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M3APCfit_Female.2$kt,type="l",col="blue")
+plot(1871:1996,M3APCfit_Female$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M3APCfit_Female.2$gc,type="l",col="blue")
+
+#Total
+M3APCfit_Total=fit(apc(link="log"),data=Totaldata,ages.fit=20:89,years.fit=1960:2016)
+plot(M3APCfit_Total)
+resM3_T=residuals(M3APCfit_Total)
+
+#robustness testing
+M3APCfit_Total.2=fit(apc(link="log"),data=Totaldata,ages.fit=20:89,years.fit=1980:2016)
+plot(20:89,M3APCfit_Total$ax,type="l",lwd=3,col="dark blue",xlab = "x",ylab="ax")
+lines(20:89,M3APCfit_Total.2$ax,type="l",col="blue")
+plot(1960:2016,M3APCfit_Total$kt,type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M3APCfit_Total.2$kt,type="l",col="blue")
+plot(1871:1996,M3APCfit_Total$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M3APCfit_Total.2$gc,type="l",col="blue")
+
+```
+
+
+```{r}
+
+
+#M4
+#Males
+library(MortalitySmooth)
+ages=20:89
+years=1960:2016
+deaths=Maledata[["Dxt"]]
+exposure=Maledata[["Ext"]]
+maledeaths=deaths[21:90,40:96]
+maleexposure=exposure[21:90,40:96]
+M4_Male=Mort2Dsmooth(x=ages,y=years,Z=maledeaths,offset=log(maleexposure))
+resM4_M=residuals(M4_Male)
+
+#Females
+ages=20:89
+years=1960:2016
+deaths=Femaledata[["Dxt"]]
+exposure=Femaledata[["Ext"]]
+femaledeaths=deaths[21:90,40:96]
+femaleexposure=exposure[21:90,40:96]
+M4_Female=Mort2Dsmooth(x=ages,y=years,Z=femaledeaths,offset=log(femaleexposure))
+resM4_M=residuals(M4_Female)
+
+#Total
+ages=20:89
+years=1960:2016
+deaths=Totaldata[["Dxt"]]
+exposure=Totaldata[["Ext"]]
+totaldeaths=deaths[21:90,40:96]
+totalexposure=exposure[21:90,40:96]
+M4_Total=Mort2Dsmooth(x=ages,y=years,Z=totaldeaths,offset=log(totalexposure))
+resM4_T=residuals(M4_Total)
+
+```
+
+
+```{r}
+
+
+#M5
+
+#Male
+M5CBDfit_Male=fit(cbd(link="log"),data=Maledata,ages.fit=20:89,years.fit=1960:2016)
+resM5_M=residuals(M5CBDfit_Male)
+#Female
+M5CBDfit_Female=fit(cbd(link="log"),data=Femaledata,ages.fit=20:89,years.fit=1960:2016)
+resM5_F=residuals(M5CBDfit_Female)
+#Total
+M5CBDfit_Total=fit(cbd(link="log"),data=Totaldata,ages.fit=20:89,years.fit=1960:2016)
+resM5_M=residuals(M5CBDfit_Total)
+
+
+#robustness testing
+M5CBDfit_Male.2=fit(cbd(link="log"),data=Maledata,ages.fit=20:89,years.fit=1980:2016)
+plot(1960:2016,M5CBDfit_Male$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M5CBDfit_Male.2$kt[1,],type="l",col="light blue")
+plot(1960:2016,M5CBDfit_Male$kt[2,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k2t")
+lines(1980:2016,M5CBDfit_Male.2$kt[2,],type="l",col="light blue")
+
+
+M5CBDfit_Female.2=fit(cbd(link="log"),data=Femaledata,ages.fit=20:89,years.fit=1980:2016)
+plot(1960:2016,M5CBDfit_Female$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M5CBDfit_Female.2$kt[1,],type="l",col="light blue")
+plot(1960:2016,M5CBDfit_Female$kt[2,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k2t")
+lines(1980:2016,M5CBDfit_Female.2$kt[2,],type="l",col="light blue")
+
+M5CBDfit_Total.2=fit(cbd(link="log"),data=Totaldata,ages.fit=20:89,years.fit=1980:2016)
+plot(1960:2016,M5CBDfit_Total$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M5CBDfit_Total.2$kt[1,],type="l",col="light blue")
+plot(1960:2016,M5CBDfit_Total$kt[2,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k2t")
+lines(1980:2016,M5CBDfit_Total.2$kt[2,],type="l",col="light blue")
+
+```
+
+
+```{r}
+
+
+#M6
+
+#Male
+M6fit_Male=fit(m6(link="log"),data=Maledata,ages.fit = 20:89,years.fit = 1960:2016)
+resM6_M=residuals(M6fit_Male)
+
+M6fit_Male.2=fit(m6(link="log"),data=Maledata,ages.fit = 20:89,years.fit = 1980:2016)
+plot(1960:2016,M6fit_Male$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M6fit_Male.2$kt[1,],type="l",col="blue")
+plot(1960:2016,M6fit_Male$kt[2,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k2t")
+lines(1980:2016,M6fit_Male.2$kt[2,],type="l",col="blue")
+plot(1871:1996,M6fit_Male$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M6fit_Male.2$gc,type="l",col="blue")
+
+M6fit_Female=fit(m6(link="log"),data=Femaledata,ages.fit = 20:89,years.fit = 1960:2016)
+resM6_F=residuals(M6fit_Female)
+
+M6fit_Female.2=fit(m6(link="log"),data=Femaledata,ages.fit = 20:89,years.fit = 1980:2016)
+plot(1960:2016,M6fit_Female$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M6fit_Female.2$kt[1,],type="l",col="blue")
+plot(1960:2016,M6fit_Female$kt[2,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k2t")
+lines(1980:2016,M6fit_Female.2$kt[2,],type="l",col="blue")
+plot(1871:1996,M6fit_Female$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M6fit_Female.2$gc,type="l",col="blue")
+
+
+M6fit_Total=fit(m6(link="log"),data=Totaldata,ages.fit = 20:89,years.fit = 1960:2016)
+resM6_T=residuals(M6fit_Total)
+
+
+M6fit_Total.2=fit(m6(link="log"),data=Maledata,ages.fit = 20:89,years.fit = 1980:2016)
+plot(1960:2016,M6fit_Total$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M6fit_Total.2$kt[1,],type="l",col="blue")
+plot(1960:2016,M6fit_Total$kt[2,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k2t")
+lines(1980:2016,M6fit_Total.2$kt[2,],type="l",col="blue")
+plot(1871:1996,M6fit_Total$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M6fit_Total.2$gc,type="l",col="blue")
+
+
+```
+
+
+```{r}
+
+#M7
+
+#Male
+M7fit_Male=fit(m7(link="log"),data=Maledata,ages.fit=20:89,years.fit=1960:2016)
+resM7_M=residuals(M7fit_Male)
+
+M7fit_Male.2=fit(m7(link="log"),data=Maledata,ages.fit=20:89,years.fit=1980:2016)
+plot(1960:2016,M7fit_Male$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M7fit_Male.2$kt[1,],type="l",col="blue")
+plot(1960:2016,M7fit_Male$kt[2,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k2t")
+lines(1980:2016,M7fit_Male.2$kt[2,],type="l",col="blue")
+plot(1960:2016,M7fit_Male$kt[3,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k3t")
+lines(1980:2016,M7fit_Male.2$kt[3,],type="l",col="blue")
+plot(1871:1996,M7fit_Male$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M7fit_Male.2$gc,type="l",col="blue")
+
+
+
+M7fit_Female=fit(m7(link="log"),data=Femaledata,ages.fit=20:89,years.fit=1960:2016)
+resM7_F=residuals(M7fit_Female)
+
+M7fit_Female.2=fit(m7(link="log"),data=Femaledata,ages.fit=20:89,years.fit=1980:2016)
+plot(1960:2016,M7fit_Female$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M7fit_Female.2$kt[1,],type="l",col="blue")
+plot(1960:2016,M7fit_Female$kt[2,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k2t")
+lines(1980:2016,M7fit_Female.2$kt[2,],type="l",col="blue")
+plot(1960:2016,M7fit_Female$kt[3,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k3t")
+lines(1980:2016,M7fit_Female.2$kt[3,],type="l",col="blue")
+plot(1871:1996,M7fit_Female$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M7fit_Female.2$gc,type="l",col="blue")
+
+M7fit_Total=fit(m7(link="log"),data=Totaldata,ages.fit=20:89,years.fit=1960:2016)
+resM7_T=residuals(M7fit_Total)
+
+M7fit_Total.2=fit(m7(link="log"),data=Totaldata,ages.fit=20:89,years.fit=1980:2016)
+plot(1960:2016,M7fit_Total$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M7fit_Total.2$kt[1,],type="l",col="blue")
+plot(1960:2016,M7fit_Total$kt[2,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k2t")
+lines(1980:2016,M7fit_Total.2$kt[2,],type="l",col="blue")
+plot(1960:2016,M7fit_Total$kt[3,],type="l",lwd=3,col="dark blue",xlab="c",ylab="k3t")
+lines(1980:2016,M7fit_Total.2$kt[3,],type="l",col="blue")
+plot(1871:1996,M7fit_Total$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M7fit_Total.2$gc,type="l",col="blue")
+
+```
+
+
+```{r}
+
+
+#M8
+
+#Male
+#find xc 
+test.xc=function(u){M8fit_Male=fit(m8(link="log",xc=u),data=Maledata,ages.fit=20:89,years.fit=1960:2016)
+return(M8fit_Male$loglik)}
+xc.max_M=optimise(test.xc,interval=c(-11500,11500),maximum=TRUE) #find the value of xc which gives highest Loglik
+
+M8fit_Male=fit(m8(link="log",xc=xc.max_M$maximum),data=Maledata,ages.fit=20:89,years.fit=1960:2016)
+resM8_M=residuals(M8fit_Male)
+
+#find xc
+test.xc.2=function(u){M8fit_Male.2=fit(m8(link="log",xc=u),data=Maledata,ages.fit=20:89,years.fit=1980:2016)
+return(M8fit_Male.2$loglik)}
+xc.max_M.2=optimise(test.xc.2,interval=c(-11500,11500),maximum=TRUE) #find the value of xc which gives highest Loglik
+
+
+M8fit_Male.2=fit(m8(link="log",xc=xc.max_M.2.2$maximum),data=Maledata,ages.fit=20:89,years.fit=1980:2016)
+plot(1960:2016,M8fit_Male$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M8fit_Male.2$kt[1,],type="l",col="blue")
+plot(1960:2016,M8fit_Male$kt[2,],type="l",lwd=3,col="dark blue",xlab="t",ylab="k2t",ylim=c(-2,0))
+lines(1980:2016,M8fit_Male.2$kt[2,],type="l",col="blue")
+plot(1871:1996,M8fit_Male$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M8fit_Male.2$gc,type="l",col="blue")  
+
+
+#Female
+#find xc
+test.xc=function(u){M8fit_Female=fit(m8(link="log",xc=u),data=Femaledata,ages.fit=20:89,years.fit=1960:2016)
+return(M8fit_Female$loglik)}
+xc.max_F=optimise(test.xc,interval=c(-11500,11500),maximum=TRUE) #find the value of xc which gives highest Loglik
+
+M8fit_Female=fit(m8(link="log",xc=xc.max_F$maximum),data=Femaledata,ages.fit=20:89,years.fit=1960:2016)
+resM8_F=residuals(M8fit_Female)
+
+
+#find xc
+test.xc.2=function(u){M8fit_Female.2=fit(m8(link="log",xc=u),data=Femaledata,ages.fit=20:89,years.fit=1980:2016)
+return(M8fit_Female.2$loglik)}
+xc.max_F.2=optimise(test.xc.2,interval=c(-11500,11500),maximum=TRUE) #find the value of xc which gives highest Loglik
+
+M8fit_Female.2=fit(m8(link="log",xc=xc.max_F.2$maximum),data=Femaledata,ages.fit=20:89,years.fit=1980:2016)
+plot(1960:2016,M8fit_Female$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M8fit_Female.2$kt[1,],type="l",col="blue")
+plot(1960:2016,M8fit_Female$kt[2,],type="l",lwd=3,col="dark blue",xlab="t",ylab="k2t",ylim=c(-2,0))
+lines(1980:2016,M8fit_Female.2$kt[2,],type="l",col="blue")
+plot(1871:1996,M8fit_Female$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M8fit_Female.2$gc,type="l",col="blue")  
+
+#Total
+
+#find xc
+test.xc=function(u){M8fit_Total=fit(m8(link="log",xc=u),data=Totaldata,ages.fit=20:89,years.fit=1960:2016)
+return(M8fit_Total$loglik)}
+xc.max_T=optimise(test.xc,interval=c(-11500,11500),maximum=TRUE) #find the value of xc which gives highest Loglik
+
+M8fit_Total=fit(m8(link="log",xc=xc.max_T$maximum),data=Totaldata,ages.fit=20:89,years.fit=1960:2016)
+resM8_T=residuals(M8fit_Total)
+
+#find xc
+test.xc.2=function(u){M8fit_Total.2=fit(m8(link="log",xc=u),data=Totaldata,ages.fit=20:89,years.fit=1980:2016)
+return(M8fit_Total.2$loglik)}
+xc.max_T.2=optimise(test.xc.2,interval=c(-11500,11500),maximum=TRUE) #find the value of xc which gives highest Loglik
+
+M8fit_Total.2=fit(m8(link="log",xc=xc.max_T.2$maximum),data=Totaldata,ages.fit=20:89,years.fit=1980:2016)
+plot(1960:2016,M8fit_Total$kt[1,],type="l",lwd=3,col="dark blue",xlab="t",ylab="kt")
+lines(1980:2016,M8fit_Total.2$kt[1,],type="l",col="blue")
+plot(1960:2016,M8fit_Total$kt[2,],type="l",lwd=3,col="dark blue",xlab="t",ylab="k2t",ylim=c(-2,0))
+lines(1980:2016,M8fit_Total.2$kt[2,],type="l",col="blue")
+plot(1871:1996,M8fit_Total$gc,type="l",lwd=3,col="dark blue",xlab="c",ylab="gc")
+lines(1891:1996,M8fit_Total.2$gc,type="l",col="blue")  
+
+```
+
+
+```{r}
+
+
+#EVALUATING AND COMPARING MODELS
+#Male
+#BIC
+M1_BIC_M=BIC(M1LCfit_Male)
+M2_BIC_M=BIC(M2RHfit_Male)
+M3_BIC_M=BIC(M3APCfit_Male)
+M4_BIC_M=M4_Male$bic
+M5_BIC_M=BIC(M5CBDfit_Male)
+M6_BIC_M=BIC(M6fit_Male)
+M7_BIC_M=BIC(M7fit_Male)
+M8_BIC_M=BIC(M8fit_Male)
+
+BIC_Male=c(M1_BIC_M,M2_BIC_M,M3_BIC_M,M4_BIC_M,M5_BIC_M,M6_BIC_M,M7_BIC_M,M8_BIC_M)
+
+#Female
+M1_BIC_F=BIC(M1LCfit_Female)
+M1_BIC_F=BIC(M2RHfit_Female)
+M3_BIC_F=BIC(M3APCfit_Female)
+M4_BIC_F=M4_Female$bic
+M5_BIC_F=BIC(M5CBDfit_Female)
+M6_BIC_F=BIC(M6fit_Female)
+M7_BIC_F=BIC(M7fit_Female)
+M8_BIC_F=BIC(M8fit_Female)
+BIC_Female=c(M1_BIC_F,M2_BIC_F,M3_BIC_F,M4_BIC_F,M5_BIC_F,M6_BIC_F,M7_BIC_F,M8_BIC_F)
+
+#Total
+M3_BIC_T=BIC(M3APCfit_Total)
+M4_BIC_T=M4_Total$bic
+M5_BIC_T=BIC(M5CBDfit_Total)
+M6_BIC_T=BIC(M6fit_Total)
+M7_BIC_T=BIC(M7fit_Total)
+M8_BIC_T=BIC(M8fit_Total)
+BIC_Total=c(M1_BIC_T,M2_BIC_T,M3_BIC_T,M4_BIC_T,M5_BIC_T,M6_BIC_T,M7_BIC_T,M8_BIC_T)
+
+
+```
+
+
+```{r}
+
+#RESIDUALS
+#Male
+plot(resM1_M)
+plot(resM1_M,type="colourmap")
+plot(resM2_M)
+plot(resM2_M,type="colourmap")
+plot(resM3_M)
+plot(resM3_M,type="colourmap")
+plot(resM4_M)
+plot(resM4_M,type="colourmap")
+plot(resM5_M)
+plot(resM5_M,type="colourmap")
+plot(resM6_M)
+plot(resM6_M,type="colourmap")
+plot(resM7_M)
+plot(resM7_M,type="colourmap")
+plot(resM8_M)
+plot(resM8_M,type="colourmap")
+
+#Female
+plot(resM1_F)
+plot(resM1_F,type="colourmap")
+plot(resM2_F)
+plot(resM2_F,type="colourmap")
+plot(resM3_F)
+plot(resM3_F,type="colourmap")
+plot(resM4_F)
+plot(resM4_F,type="colourmap")
+plot(resM5_F)
+plot(resM5_F,type="colourmap")
+plot(resM6_F)
+plot(resM6_F,type="colourmap")
+plot(resM7_F)
+plot(resM7_F,type="colourmap")
+plot(resM8_F)
+plot(resM8_F,type="colourmap")
+
+#Total
+plot(resM1_T)
+plot(resM1_T,type="colourmap")
+plot(resM2_T)
+plot(resM2_T,type="colourmap")
+plot(resM3_T)
+plot(resM3_T,type="colourmap")
+plot(resM4_T)
+plot(resM4_T,type="colourmap")
+plot(resM5_T)
+plot(resM5_T,type="colourmap")
+plot(resM6_T)
+plot(resM6_T,type="colourmap")
+plot(resM7_T)
+plot(resM7_T,type="colourmap")
+plot(resM8_T)
+plot(resM8_T,type="colourmap")
+
+
+```
+
+
+```{r}
+
+#VARIANCE OF RESIDUALS
+#Males
+v1_M=matrix(resM1_M$residuals,nrow=3990)
+var_1_M=var(resM1_M$residuals,nrow=3990)
+
+v2_M=matrix(resM2_M$residuals,nrow=3990)
+var_2_M=var(resM2_M$residuals,nrow=3990)
+
+v3_M=matrix(resM3_M$residuals,nrow=3990)
+var_3_M=var(resM3_M$residuals,nrow=3990)
+
+v4_M=matrix(resM4_M$residuals,nrow=3990)
+var_4_M=var(resM4_M$residuals,nrow=3990)
+
+v5_M=matrix(resM3_M$residuals,nrow=3990)
+var_5_M=var(resM4_M$residuals,nrow=3990)
+
+v6_M=matrix(resM3_M$residuals,nrow=3990)
+var_6_M=var(resM4_M$residuals,nrow=3990)
+
+v7_M=matrix(resM3_M$residuals,nrow=3990)
+var_7_M=var(resM4_M$residuals,nrow=3990)
+
+v8_M=matrix(resM3_M$residuals,nrow=3990)
+var_8_M=var(resM4_M$residuals,nrow=3990)
+
+var_res_M=c(var_1_M,var_2_M,var_3_M,var_4_M,var_5_M,var_6_M,var_7_M,var_8_M)
+
+#Females
+v1_F=matrix(resM1_F$residuals,nrow=3990)
+var_1_F=var(resM1_F$residuals,nrow=3990)
+
+v2_F=matrix(resM2_F$residuals,nrow=3990)
+var_2_F=var(resM2_F$residuals,nrow=3990)
+
+v3_F=matrix(resM3_F$residuals,nrow=3990)
+var_3_F=var(resM3_F$residuals,nrow=3990)
+
+v4_F=matrix(resM4_F$residuals,nrow=3990)
+var_4_F=var(resM4_F$residuals,nrow=3990)
+
+v5_F=matrix(resM3_F$residuals,nrow=3990)
+var_5_F=var(resM4_F$residuals,nrow=3990)
+
+v6_F=matrix(resM3_F$residuals,nrow=3990)
+var_6_F=var(resM4_F$residuals,nrow=3990)
+
+v7_F=matrix(resM3_F$residuals,nrow=3990)
+var_7_F=var(resM4_F$residuals,nrow=3990)
+
+v8_F=matrix(resM3_F$residuals,nrow=3990)
+var_8_F=var(resM4_F$residuals,nrow=3990)
+
+var_res_F=c(var_1_F,var_2_F,var_3_F,var_4_F,var_5_F,var_6_F,var_7_F,var_8_F)
+
+
+#Total
+v1_T=matrix(resM1_F$residuals,nrow=3990)
+var_1_T=var(resM1_F$residuals,nrow=3990)
+
+v2_T=matrix(resM2_F$residuals,nrow=3990)
+var_2_T=var(resM2_F$residuals,nrow=3990)
+
+v3_T=matrix(resM3_F$residuals,nrow=3990)
+var_3_T=var(resM3_F$residuals,nrow=3990)
+
+v4_T=matrix(resM4_F$residuals,nrow=3990)
+var_4_T=var(resM4_F$residuals,nrow=3990)
+
+v5_T=matrix(resM3_F$residuals,nrow=3990)
+var_5_T=var(resM4_F$residuals,nrow=3990)
+
+v6_T=matrix(resM3_F$residuals,nrow=3990)
+var_6_T=var(resM4_F$residuals,nrow=3990)
+
+v7_T=matrix(resM3_F$residuals,nrow=3990)
+var_7_T=var(resM4_F$residuals,nrow=3990)
+
+v8_T=matrix(resM3_F$residuals,nrow=3990)
+var_8_T=var(resM4_F$residuals,nrow=3990)
+
+var_res_T=c(var_1_T,var_2_T,var_3_T,var_4_T,var_5_T,var_6_T,var_7_T,var_8_T)
+
+```
+
+
+```{r}
+
+#loglikelihood
+#Males
+M1LCfit_Male$loglik
+M2RHfit_Male$loglik
+M3APCfit_Male$loglik
+M4_Male$loglik
+M5CBDfit_Male$loglik
+M6fit_Male$loglik
+M7fit_Male$loglik
+M8fit_Male$loglik
+
+#Females
+M1LCfit_Female$loglik
+M2RHfit_Female$loglik
+M3APCfit_Female$loglik
+M4_Female$loglik
+M5CBDfit_Female$loglik
+M6fit_Female$loglik
+M7fit_Female$loglik
+M8fit_Female$loglik
+
+
+#Total
+M1LCfit_Total$loglik
+M2RHfit_Total$loglik
+M3APCfit_Total$loglik
+M4_Total$loglik
+M5CBDfit_Total$loglik
+M6fit_Total$loglik
+M7fit_Total$loglik
+M8fit_Total$loglik
+
+```
+
+
+```{r}
+
+#likelihood ratio test H0:M1, H1:M2  ;  H0:M3, H1:M2
+#Female
+#H0:M1, H1:M2
+#LR Test statistic
+2*(M2RHfit_Female$loglik-M1LCfit_Female$loglik)
+#df
+M2RHfit_Female$npar-M1LCfit_Female$npar
+#p-value
+1-pchisq(2*(M2RHfit_Female$loglik-M1LCfit_Female$loglik),M2RHfit_Female$npar-M1LCfit_Female$npar)
+
+#H0:M3, H1:M2
+#LR Test statistic
+2*(M2RHfit_Female$loglik-M3APCfit_Female$loglik)
+#df
+M2RHfit_Female$npar-M3APCfit_Female$npar
+#p-value
+1-pchisq(2*(M2RHfit_Female$loglik-M3APCfit_Female$loglik),M2RHfit_Female$npar-M3APCfit_Female$npar)
+
+#H0:M5, H1:M6
+#LR Test statistic
+2*(M6fit_Female$loglik-M5CBDfit_Female$loglik)
+#df
+M6fit_Female$npar-M5CBDfit_Female$npar
+#p-value
+1-pchisq(2*(M6fit_Female$loglik-M5CBDfit_Female$loglik),M6fit_Female$npar-M5CBDfit_Female$npar)
+
+
+#H0:M5, H1:M7
+#LR Test statistic
+2*(M7fit_Female$loglik-M5CBDfit_Female$loglik)
+#df
+M7fit_Female$npar-M5CBDfit_Female$npar
+#p-value
+1-pchisq(2*(M7fit_Female$loglik-M5CBDfit_Female$loglik),M7fit_Female$npar-M5CBDfit_Female$npar)
+
+#H0:M6, H1:M7
+#LR Test statistic
+2*(M7fit_Female$loglik-M6fit_Female$loglik)
+#df
+M7fit_Female$npar-M6fit_Female$npar
+#p-value
+1-pchisq(2*(M7fit_Female$loglik-M6fit_Female$loglik),M7fit_Female$npar-M6fit_Female$npar)
+
+#H0:M5, H1:M8
+#LR Test statistic
+2*(M8fit_Female$loglik-M5CBDfit_Female$loglik)
+#df
+M8fit_Female$npar-M5CBDfit_Female$npar
+#p-value
+1-pchisq(2*(M8fit_Female$loglik-M5CBDfit_Female$loglik),M8fit_Female$npar-M5CBDfit_Female$npar)
+
+#H0:M6, H1:M8
+#LR Test statistic
+2*(M8fit_Female$loglik-M6fit_Female$loglik)
+#df
+M8fit_Female$npar-M6fit_Female$npar
+#p-value
+1-pchisq(2*(M8fit_Female$loglik-M6fit_Female$loglik),M8fit_Female$npar-M6fit_Female$npar)
+
+
+
+#Male
+
+#H0:M1, H1:M2
+#LR Test statistic
+2*(M2RHfit_Male$loglik-M1LCfit_Male$loglik)
+#df
+M2RHfit_Male$npar-M1LCfit_Male$npar
+#p-value
+1-pchisq(2*(M2RHfit_Male$loglik-M1LCfit_Male$loglik),M2RHfit_Male$npar-M1LCfit_Male$npar)
+
+#H0:M3, H1:M2
+#LR Test statistic
+2*(M2RHfit_Male$loglik-M3APCfit_Male$loglik)
+#df
+M2RHfit_Male$npar-M3APCfit_Male$npar
+#p-value
+1-pchisq(2*(M2RHfit_Male$loglik-M3APCfit_Male$loglik),M2RHfit_Male$npar-M3APCfit_Male$npar)
+
+#H0:M5, H1:M6
+#LR Test statistic
+2*(M6fit_Male$loglik-M5CBDfit_Male$loglik)
+#df
+M6fit_Male$npar-M5CBDfit_Male$npar
+#p-value
+1-pchisq(2*(M6fit_Male$loglik-M5CBDfit_Male$loglik),M6fit_Male$npar-M5CBDfit_Male$npar)
+
+
+#H0:M5, H1:M7
+#LR Test statistic
+2*(M7fit_Male$loglik-M5CBDfit_Male$loglik)
+#df
+M7fit_Male$npar-M5CBDfit_Male$npar
+#p-value
+1-pchisq(2*(M7fit_Male$loglik-M5CBDfit_Male$loglik),M7fit_Male$npar-M5CBDfit_Male$npar)
+
+#H0:M6, H1:M7
+#LR Test statistic
+2*(M7fit_Male$loglik-M6fit_Male$loglik)
+#df
+M7fit_Male$npar-M6fit_Male$npar
+#p-value
+1-pchisq(2*(M7fit_Male$loglik-M6fit_Male$loglik),M7fit_Male$npar-M6fit_Male$npar)
+
+#H0:M5, H1:M8
+#LR Test statistic
+2*(M8fit_Male$loglik-M5CBDfit_Male$loglik)
+#df
+M8fit_Male$npar-M5CBDfit_Male$npar
+#p-value
+1-pchisq(2*(M8fit_Male$loglik-M5CBDfit_Male$loglik),M8fit_Male$npar-M5CBDfit_Male$npar)
+
+#0:M6, H1:M8
+#LR Test statistic
+2*(M8fit_Male$loglik-M6fit_Male$loglik)
+#df
+M8fit_Male$npar-M6fit_Male$npar
+#p-value
+1-pchisq(2*(M8fit_Male$loglik-M6fit_Male$loglik),M8fit_Male$npar-M6fit_Male$npar)
+
+#Total
+
+#H0:M1, H1:M2
+#LR Test statistic
+2*(M2RHfit_Total$loglik-M1LCfit_Total$loglik)
+#df
+M2RHfit_Total$npar-M1LCfit_Total$npar
+#p-value
+1-pchisq(2*(M2RHfit_Total$loglik-M1LCfit_Total$loglik),M2RHfit_Total$npar-M1LCfit_Total$npar)
+
+#H0:M3, H1:M2
+#LR Test statistic
+2*(M2RHfit_Total$loglik-M3APCfit_Total$loglik)
+#df
+M2RHfit_Total$npar-M3APCfit_Total$npar
+#p-value
+1-pchisq(2*(M2RHfit_Total$loglik-M3APCfit_Total$loglik),M2RHfit_Total$npar-M3APCfit_Total$npar)
+
+#H0:M5, H1:M6
+#LR Test statistic
+2*(M6fit_Total$loglik-M5CBDfit_Total$loglik)
+#df
+M6fit_Total$npar-M5CBDfit_Total$npar
+#p-value
+1-pchisq(2*(M6fit_Total$loglik-M5CBDfit_Total$loglik),M6fit_Total$npar-M5CBDfit_Total$npar)
+
+
+#H0:M5, H1:M7
+#LR Test statistic
+2*(M7fit_Total$loglik-M5CBDfit_Total$loglik)
+#df
+M7fit_Total$npar-M5CBDfit_Total$npar
+#p-value
+1-pchisq(2*(M7fit_Total$loglik-M5CBDfit_Total$loglik),M7fit_Total$npar-M5CBDfit_Total$npar)
+
+#H0:M6, H1:M7
+#LR Test statistic
+2*(M7fit_Total$loglik-M6fit_Total$loglik)
+#df
+M7fit_Total$npar-M6fit_Total$npar
+#p-value
+1-pchisq(2*(M7fit_Total$loglik-M6fit_Total$loglik),M7fit_Total$npar-M6fit_Total$npar)
+
+#H0:M5, H1:M8
+#LR Test statistic
+2*(M8fit_Total$loglik-M5CBDfit_Total$loglik)
+#df
+M8fit_Total$npar-M5CBDfit_Total$npar
+#p-value
+1-pchisq(2*(M8fit_Total$loglik-M5CBDfit_Total$loglik),M8fit_Total$npar-M5CBDfit_Total$npar)
+
+#H0:M6, H1:M8
+#LR Test statistic
+2*(M8fit_Total$loglik-M6fit_Total$loglik)
+#df
+M8fit_Total$npar-M6fit_Total$npar
+#p-value
+1-pchisq(2*(M8fit_Total$loglik-M6fit_Total$loglik),M8fit_Total$npar-M6fit_Total$npar)
+
+
+```
+
+
+```{r}
+
+#Predicting mortality rates
+#method of simulation:
+  Question 7 
+
+#Male M2
+M2sim_Male=simulate(M2RHfit_Male,nsim=500,h=20)
+meanM2sim_Male=apply(M2sim_Male$rates,c(1,2),mean)
+mxtPred2.5_M2Male=apply(meanM2sim_Male,c(1,2),quantile,prob=0.025)
+mxtPred97.5_M2Male=apply(meanM2sim_Male,c(1,2),quantile,prob=0.975)
+
+#Total M2
+M2sim_Total=simulate(M2RHfit_Total,nsim=500,h=20)
+meanM2sim_Total=apply(M2sim_Total$rates,c(1,2),mean)
+mxtPred2.5_M2Total=apply(meanM2sim_Total,c(1,2),quantile,prob=0.025)
+mxtPred97.5_M2Total=apply(meanM2sim_Total,c(1,2),quantile,prob=0.975)
+
+#Female M7
+M7sim_Female=simulate(M7fit_Female,nsim=500,h=20)
+meanM7sim_Female=apply(M7sim_Female$rates,c(1,2),mean)
+
+mxtPred2.5_M7Female=apply(meanM7sim_Female,c(1,2),quantile,prob=0.025)
+mxtPred97.5_M7Female=apply(meanM7sim_Female,c(1,2),quantile,prob=0.975)
+
+
+```
+
+
+```{r}
+
+################Forecast 
+#Predictions
+#age 30 M2 Total
+M2RHfit_Totalfor<-forecast(M2RHfit_Total, h=20,level=95)
+pointm2for_30<-numeric(20)
+meanm2forgc<-append(M2RHfit_Total$gc[117:126],M2RHfit_Totalfor$gc.f$mean)
+for (i in 1:20){
+  pointm2for_30[i]<-M2RHfit_Total$ax[11]+M2RHfit_Total$bx[11]*M2RHfit_Totalfor$kt.f$mean[i]+M2RHfit_Total$b0x[11]*meanm2forgc[i]
+}
+lowerm2for_30<-numeric(20)
+lowerm2forgc<-append(M2RHfit_Total$gc[117:126],M2RHfit_Totalfor$gc.f$lower)
+for (i in 1:20){
+  lowerm2for_30[i]<-M2RHfit_Total$ax[11]+M2RHfit_Total$bx[11]*M2RHfit_Totalfor$kt.f$lower[i]+M2RHfit_Total$b0x[11]*lowerm2forgc[i]
+}
+upperm2for_30<-numeric(20)
+upperm2forgc<-append(M2RHfit_Total$gc[117:126],M2RHfit_Totalfor$gc.f$upper)
+for (i in 1:20){
+  upperm2for_30[i]<-M2RHfit_Total$ax[11]+M2RHfit_Total$bx[11]*M2RHfit_Totalfor$kt.f$upper[i]+M2RHfit_Total$b0x[11]*upperm2forgc[i]
+}
+plot(1960:2016,exp(fitted(M2RHfit_Total))[11,],xlim = c(1960,2036), ylim=c(min(exp(lowerm2for_30)),max(exp(fitted(M2RHfit_Total))[11,])))
+lines(2017:2036,exp(pointm2for_30),col="red")
+lines(2017:2036,exp(lowerm2for_30),col="blue")
+lines(2017:2036,exp(upperm2for_30),col="green")
+points(2017:2036, M2RHfit_Totalfor$rates[11,])
+
+#age 40 M2 Total
+Total2for<-forecast(M2RHfit_Total, h=20,level=95)
+pointm2for_40<-numeric(20)
+for (i in 1:20){
+  pointm2for_40[i]<-M2RHfit_Total$ax[21]+M2RHfit_Total$bx[21]*M2RHfit_Totalfor$kt.f$mean[i]+M2RHfit_Total$b0x[21]*M2RHfit_Total$gc[106+i]
+}
+lowerm2for_40<-numeric(20)
+for (i in 1:20){
+  lowerm2for_40[i]<-M2RHfit_Total$ax[21]+M2RHfit_Total$bx[21]*M2RHfit_Totalfor$kt.f$lower[i]+M2RHfit_Total$b0x[21]*M2RHfit_Total$gc[106+i]
+}
+upperm2for_40<-numeric(20)
+for (i in 1:20){
+  upperm2for_40[i]<-M2RHfit_Total$ax[21]+M2RHfit_Total$bx[21]*M2RHfit_Totalfor$kt.f$upper[i]+M2RHfit_Total$b0x[21]*M2RHfit_Total$gc[106+i]
+}
+plot(1960:2016, exp(fitted(M2RHfit_Total))[21,],xlim = c(1960,2036), ylim=c(min(exp(lowerm2for_40)),max(exp(fitted(M2RHfit_Total))[21,])))
+lines(2017:2036,exp(pointm2for_40),col="red")
+lines(2017:2036,exp(lowerm2for_40),col="blue")
+lines(2017:2036,exp(upperm2for_40),col="green")
+points(2017:2036, M2RHfit_Totalfor$rates[21,])
+
+#age 50 M2 Total
+M2RHfit_Totalfor<-forecast(M2RHfit_Total, h=20,level=95)
+pointm2for_50<-numeric(20)
+for (i in 1:20){
+  pointm2for_50[i]<-M2RHfit_Total$ax[31]+M2RHfit_Total$bx[31]*M2RHfit_Totalfor$kt.f$mean[i]+M2RHfit_Total$b0x[31]*M2RHfit_Total$gc[96+i]
+}
+lowerm2for_50<-numeric(20)
+for (i in 1:20){
+  lowerm2for_50[i]<-M2RHfit_Total$ax[31]+M2RHfit_Total$bx[31]*M2RHfit_Totalfor$kt.f$lower[i]+M2RHfit_Total$b0x[31]*M2RHfit_Total$gc[96+i]
+}
+upperm2for_50<-numeric(20)
+for (i in 1:20){
+  upperm2for_50[i]<-M2RHfit_Total$ax[31]+M2RHfit_Total$bx[31]*M2RHfit_Totalfor$kt.f$upper[i]+M2RHfit_Total$b0x[31]*M2RHfit_Total$gc[96+i]
+}
+
+plot(1960:2016,exp(fitted(M2RHfit_Total))[31,],xlim = c(1960,2036), ylim=c(min(exp(lowerm2for_50)),max(exp(fitted(M2RHfit_Total))[31,])))
+lines(2017:2036,exp(pointm2for_50),col="red")
+lines(2017:2036,exp(lowerm2for_50),col="green")
+lines(2017:2036,exp(upperm2for_50),col="blue")
+points(2017:2036, M2RHfit_Totalfor$rates[31,])
+
+
+
+
+#age 30 M2 Male
+M2RHfit_Malefor<-forecast(M2RHfit_Male, h=20,level=95)
+mpointm2for_30<-numeric(20)
+mmeanm2forgc<-append(M2RHfit_Male$gc[117:126],M2RHfit_Malefor$gc.f$mean)
+for (i in 1:20){
+  mpointm2for_30[i]<-M2RHfit_Male$ax[11]+M2RHfit_Male$bx[11]*M2RHfit_Malefor$kt.f$mean[i]+M2RHfit_Male$b0x[11]*mmeanm2forgc[i]
+}
+mlowerm2for_30<-numeric(20)
+mlowerm2forgc<-append(M2RHfit_Male$gc[117:126],M2RHfit_Malefor$gc.f$lower)
+for (i in 1:20){
+  mlowerm2for_30[i]<-M2RHfit_Male$ax[11]+M2RHfit_Male$bx[11]*M2RHfit_Malefor$kt.f$lower[i]+M2RHfit_Male$b0x[11]*mlowerm2forgc[i]
+}
+mupperm2for_30<-numeric(20)
+mupperm2forgc<-append(M2RHfit_Male$gc[117:126],M2RHfit_Malefor$gc.f$upper)
+for (i in 1:20){
+  mupperm2for_30[i]<-M2RHfit_Male$ax[11]+M2RHfit_Male$bx[11]*M2RHfit_Malefor$kt.f$upper[i]+M2RHfit_Male$b0x[11]*mupperm2forgc[i]
+}
+plot(1960:2016,exp(fitted(M2RHfit_Male))[11,],xlim = c(1960,2036), ylim=c(min(exp(mlowerm2for_30)),max(exp(fitted(M2RHfit_Male))[11,])))
+lines(2017:2036,exp(mpointm2for_30),col="red")
+lines(2017:2036,exp(mlowerm2for_30),col="blue")
+lines(2017:2036,exp(mupperm2for_30),col="green")
+points(2017:2036, M2RHfit_Malefor$rates[11,])
+
+#age 40 M2 Male
+M2RHfit_Malefor<-forecast(M2RHfit_Male, h=20,level=95)
+mpointm2for_40<-numeric(20)
+for (i in 1:20){
+  mpointm2for_40[i]<-M2RHfit_Male$ax[21]+M2RHfit_Male$bx[21]*M2RHfit_Malefor$kt.f$mean[i]+M2RHfit_Male$b0x[21]*M2RHfit_Male$gc[106+i]
+}
+mlowerm2for_40<-numeric(20)
+for (i in 1:20){
+  mlowerm2for_40[i]<-M2RHfit_Male$ax[21]+M2RHfit_Male$bx[21]*M2RHfit_Malefor$kt.f$lower[i]+M2RHfit_Male$b0x[21]*M2RHfit_Male$gc[106+i]
+}
+mupperm2for_40<-numeric(20)
+for (i in 1:20){
+  mupperm2for_40[i]<-M2RHfit_Male$ax[21]+M2RHfit_Male$bx[21]*M2RHfit_Malefor$kt.f$upper[i]+M2RHfit_Male$b0x[21]*M2RHfit_Male$gc[106+i]
+}
+
+plot(1960:2016, exp(fitted(M2RHfit_Male))[21,],xlim = c(1960,2036), ylim=c(min(exp(mlowerm2for_40)),max(exp(fitted(M2RHfit_Male))[21,])))
+lines(2017:2036,exp(mpointm2for_40),col="red")
+lines(2017:2036,exp(mlowerm2for_40),col="blue")
+lines(2017:2036,exp(mupperm2for_40),col="green")
+points(2017:2036, M2RHfit_Malefor$rates[21,])
+
+#age 50 M2 Male
+M2RHfit_Malefor<-forecast(M2RHfit_Male, h=20,level=95)
+mpointm2for_50<-numeric(20)
+for (i in 1:20){
+  mpointm2for_50[i]<-M2RHfit_Male$ax[31]+M2RHfit_Male$bx[31]*M2RHfit_Malefor$kt.f$mean[i]+M2RHfit_Male$b0x[31]*M2RHfit_Male$gc[96+i]
+}
+mlowerm2for_50<-numeric(20)
+for (i in 1:20){
+  mlowerm2for_50[i]<-M2RHfit_Male$ax[31]+M2RHfit_Male$bx[31]*M2RHfit_Malefor$kt.f$lower[i]+M2RHfit_Male$b0x[31]*M2RHfit_Male$gc[96+i]
+}
+mupperm2for_50<-numeric(20)
+for (i in 1:20){
+  mupperm2for_50[i]<-M2RHfit_Male$ax[31]+M2RHfit_Male$bx[31]*M2RHfit_Malefor$kt.f$upper[i]+M2RHfit_Male$b0x[31]*M2RHfit_Male$gc[96+i]
+}
+
+plot(1960:2016,exp(fitted(M2RHfit_Male))[31,],xlim = c(1960,2036), ylim=c(min(exp(mlowerm2for_50)),max(exp(fitted(M2RHfit_Male))[31,])))
+lines(2017:2036,exp(mpointm2for_50),col="red")
+lines(2017:2036,exp(mlowerm2for_50),col="green")
+lines(2017:2036,exp(mupperm2for_50),col="blue")
+points(2017:2036, M2RHfit_Malefor$rates[31,])
+
+
+
+#M7 Forecast
+#X=30 female
+M7fit_Femalefor<-forecast(M7fit_Female, h=20,level=95)
+fpointm7for_30<-numeric(20)
+fmeanm7forgc<-append(M7fit_Female$gc[117:126],M7fit_Femalefor$gc.f$mean)
+for (i in 1:20){
+  fpointm7for_30[i]<-M7fit_Femalefor$kt.f$mean[1,i]+M7fit_Female$bx[11,2]*M7fit_Femalefor$kt.f$mean[2,i]+M7fit_Femalefor$kt.f$mean[3,i]*M7fit_Female$bx[11,3]+fmeanm7forgc[i]
+}
+flowerm7forgc<-append(M7fit_Female$gc[117:126],M7fit_Femalefor$gc.f$lower)
+flowerm7for_30<-numeric(20)
+for (i in 1:20){
+  flowerm7for_30[i]<-M7fit_Femalefor$kt.f$lower[1,i,]+M7fit_Female$bx[11,2]*M7fit_Femalefor$kt.f$lower[2,i,]+M7fit_Femalefor$kt.f$lower[3,i,]*M7fit_Female$bx[11,3]+flowerm7forgc[i]
+}
+fupperm7forgc<-append(M7fit_Female$gc[117:126],M7fit_Femalefor$gc.f$upper)
+fupperm7for_30<-numeric(20)
+for (i in 1:20){
+  fupperm7for_30[i]<-M7fit_Femalefor$kt.f$upper[1,i,]+M7fit_Female$bx[11,2]*M7fit_Femalefor$kt.f$upper[2,i,]+M7fit_Femalefor$kt.f$upper[3,i,]*M7fit_Female$bx[11,3]+fupperm7forgc[i]
+}
+
+plot(1960:2016,exp(fitted(M7fit_Female)[11,]),xlim = c(1960,2036), ylim=c(min(exp(flowerm7for_30)),max(exp(fitted(M7fit_Female)[11,]))))
+lines(2017:2036,exp(fpointm7for_30),col=2)
+lines(2017:2036,exp(flowerm7for_30),col=3)
+lines(2017:2036,exp(fupperm7for_30),col=4)
+points(2017:2036, (M7fit_Femalefor$rates[11,]))
+
+#M7 Forecast
+#X=40 female
+M7fit_Femalefor<-forecast(M7fit_Female, h=20,level=95)
+fpointm7for_40<-numeric(20)
+for (i in 1:20){
+  fpointm7for_40[i]<-M7fit_Femalefor$kt.f$mean[1,i]+M7fit_Female$bx[21,2]*M7fit_Femalefor$kt.f$mean[2,i]+M7fit_Femalefor$kt.f$mean[3,i]*M7fit_Female$bx[21,3]+M7fit_Female$gc[106+i]
+}
+flowerm7for_40<-numeric(20)
+for (i in 1:20){
+  flowerm7for_40[i]<-M7fit_Femalefor$kt.f$lower[1,i,]+M7fit_Female$bx[21,2]*M7fit_Femalefor$kt.f$lower[2,i,]+M7fit_Femalefor$kt.f$lower[3,i,]*M7fit_Female$bx[21,3]+M7fit_Female$gc[106+i]
+}
+fupperm7for_40<-numeric(20)
+for (i in 1:20){
+  fupperm7for_40[i]<-M7fit_Femalefor$kt.f$upper[1,i,]+M7fit_Female$bx[21,2]*M7fit_Femalefor$kt.f$upper[2,i,]+M7fit_Femalefor$kt.f$upper[3,i,]*M7fit_Female$bx[21,3]+M7fit_Female$gc[106+i]
+}
+plot(1960:2016,exp(fitted(M7fit_Female)[21,]),xlim = c(1960,2036), ylim=c(min(exp(flowerm7for_40)),max(exp(fitted(M7fit_Female)[21,]))))
+lines(2017:2036,exp(fpointm7for_40),col=2)
+lines(2017:2036,exp(flowerm7for_40),col=3)
+lines(2017:2036,exp(fupperm7for_40),col=4)
+points(2017:2036, (M7fit_Femalefor$rates[21,]))
+
+#M7 Forecast
+#X=50
+M7fit_Femalefor<-forecast(M7fit_Female, h=20,level=95)
+fpointm7for_50<-numeric(20)
+for (i in 1:20){
+  fpointm7for_50[i]<-M7fit_Femalefor$kt.f$mean[1,i]+M7fit_Female$bx[31,2]*M7fit_Femalefor$kt.f$mean[2,i]+M7fit_Femalefor$kt.f$mean[3,i]*M7fit_Female$bx[31,3]+M7fit_Female$gc[96+i]
+}
+flowerm7for_50<-numeric(20)
+for (i in 1:20){
+  flowerm7for_50[i]<-M7fit_Femalefor$kt.f$lower[1,i,]+M7fit_Female$bx[31,2]*M7fit_Femalefor$kt.f$lower[2,i,]+M7fit_Femalefor$kt.f$lower[3,i,]*M7fit_Female$bx[31,3]+M7fit_Female$gc[96+i]
+}
+fupperm7for_50<-numeric(20)
+for (i in 1:20){
+  fupperm7for_50[i]<-M7fit_Femalefor$kt.f$upper[1,i,]+M7fit_Female$bx[31,2]*M7fit_Femalefor$kt.f$upper[2,i,]+M7fit_Femalefor$kt.f$upper[3,i,]*M7fit_Female$bx[31,3]+M7fit_Female$gc[96+i]
+}
+plot(1960:2016,exp(fitted(M7fit_Female)[31,]),xlim = c(1960,2036), ylim=c(min(exp(flowerm7for_50)),max(exp(fitted(M7fit_Female)[31,]))))
+lines(2017:2036,exp(fpointm7for_50),col=2)
+lines(2017:2036,exp(flowerm7for_50),col=3)
+lines(2017:2036,exp(fupperm7for_50),col=4)
+points(2017:2036, (M7fit_Femalefor$rates[31,]))
+
+```
+
